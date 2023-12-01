@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: db-statefulset
+  labels:
+    app: db
+spec:
+    serviceName: db-service
+    replicas: 3
+    selector:
+        matchLabels:
+          app: db
+    template:
+        metadata:
+          labels:
+            app: db
+        spec:
+          imagePullSecrets:
+            - name: takima-school-registry
+          containers:
+            - name: db
+              image: registry.takima.io/school/proxy/db:latest
+              ports:
+                - containerPort: 5432
+              volumeMounts:
+                - name: db-volume
+                  mountPath: /var/lib/postgresql/data
+              env:
+                - name: PGDATA
+                  valueFrom:
+                    configMapKeyRef:
+                      key: db-data
+                      name: db-config
+                - name: POSTGRES_DB
+                  valueFrom:
+                    configMapKeyRef:
+                      key: db
+                      name: db-config
+                - name: POSTGRES_USER
+                  valueFrom:
+                    secretKeyRef:
+                      key: db-user
+                      name: db-secret
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      key: db-password
+                      name: db-secret
+    volumeClaimTemplates:
+      - metadata:
+          name: db-volume
+        spec:
+          accessModes: [ "ReadWriteOnce" ]
+          resources:
+            requests:
+              storage: 3Gi

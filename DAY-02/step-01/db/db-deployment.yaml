@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-deployment
+  labels:
+    app: db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      imagePullSecrets:
+        - name: takima-school-registry
+      volumes:
+        - name: db-volume
+          persistentVolumeClaim:
+              claimName: db-pvc
+      containers:
+        - name: db
+          image: registry.takima.io/school/proxy/db:latest
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: db-volume
+              mountPath: /var/lib/postgresql/data
+          env:
+            - name: PGDATA
+              valueFrom:
+                configMapKeyRef:
+                  key: db-data
+                  name: db-config
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  key: db
+                  name: db-config
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  key: db-user
+                  name: db-secret
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: db-password
+                  name: db-secret
+

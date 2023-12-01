@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simple-website-deployment
+  labels:
+    app: simple-website
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: simple-website
+  template:
+    metadata:
+      labels:
+        app: simple-website
+    spec:
+      imagePullSecrets:
+      - name: takima-school-registry
+      containers:
+        - name: simple-website
+          image: registry.gitlab.com/takima-school/images/simple-website:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: USER
+              valueFrom:
+                secretKeyRef:
+                  key: username
+                  name: simple-website-secret
+            - name: PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: simple-website-secret
+            - name: CUSTOM_COLOR # Vrai key de la variable d'env. Peut être différent de la valeur dans le config map
+              valueFrom:
+                secretKeyRef:
+                  name: simple-website-secret  # Nom du configmap
+                  key: color     # nom de la clef dans le config map
+            - name: K8S_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: K8S_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: K8S_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          livenessProbe:
+            httpGet:
+              path: /health  # Endpoint de health check
+              port: 8080
+            initialDelaySeconds: 3  # Attendre 3 secondes avant le premier check
+            periodSeconds: 10  # Vérifier toutes les 10 secondes
+

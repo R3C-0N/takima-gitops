@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+  labels:
+    app: api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      imagePullSecrets:
+        - name: takima-school-registry
+      containers:
+        - name: api
+          image: registry.gitlab.com/takima-school/images/cdb/api:latest
+          resources:
+            requests:
+              memory: "192M"
+              cpu: "100m"
+            limits:
+              memory: "256M"
+              cpu: "1"
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DB_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  key: db-endpoint
+                  name: api-config
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  key: db
+                  name: db-config
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  key: username
+                  name: users.formation-cdb.credentials.postgresql.acid.zalan.do
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: users.formation-cdb.credentials.postgresql.acid.zalan.do
+          securityContext:
+            runAsUser: 1001
+            runAsGroup: 1001
+            allowPrivilegeEscalation: false
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 5
+
